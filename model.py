@@ -24,7 +24,7 @@ class User(Base):
     email = Column(String(50), unique=True)
     phone = Column(BigInteger)
     location = Column(String(100))
-    password = Column(String(50))
+    password = Column(String(100))
     is_verified = Column(Boolean, default=False)
 
     def __repr__(self):
