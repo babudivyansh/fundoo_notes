@@ -5,7 +5,7 @@
 
 @Last Modified by: Divyansh Babu
 
-@Last Modified time: 2024-01-10 10:44
+@Last Modified time: 2024-01-16 10:45
 
 @Title : Label crud APIs.
 """
@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from core.model import get_db, Label
 from fastapi.responses import Response
 from core.schema import LabelSchema
+from core.utils import logger
+
 
 router_label = APIRouter()
 
@@ -36,6 +38,7 @@ def create_label(payload: LabelSchema, request: Request, response: Response, db:
         return {'message': 'Label Added', 'status': 201, 'data': body}
     except Exception as e:
         response.status_code = status.HTTP_400_BAD_REQUEST
+        logger.exception(e)
         return {"message": str(e)}
 
 
@@ -47,13 +50,11 @@ def getting_all_label(request: Request, response: Response, db: Session = Depend
     Return: Message of retrieved data with status code 200.
     """
     try:
-        existing_label = db.query(Label).filter_by(user_id=request.state.user.id).first()
-        if existing_label:
-            existing_label = db.query(Label).all()
-            return {'message': 'Data retrieved', 'status': 200, 'data': existing_label}
-        return {'message': 'Invalid user id', 'status': 400}
+        existing_label = db.query(Label).filter_by(user_id=request.state.user.id).all()
+        return {'message': 'Data retrieved', 'status': 200, 'data': existing_label}
     except Exception as e:
         response.status_code = 400
+        logger.exception(e)
         return {'message': str(e), 'status': 400}
 
 
@@ -72,14 +73,13 @@ def update_label(label_id: int, request: Request, payload: LabelSchema, response
             raise HTTPException(detail='Label not found', status_code=status.HTTP_404_NOT_FOUND)
 
         updated_data = payload.model_dump()
-        for key, value in updated_data.items():
-            setattr(label, key, value)
-
+        [setattr(label, key, value) for key, value in updated_data.items()]
         db.commit()
         db.refresh(label)
         return {'message': 'Label updated', 'status': 200, 'data': updated_data}
     except Exception as e:
         response.status_code = status.HTTP_400_BAD_REQUEST
+        logger.exception(e)
         return {'message': str(e), 'status': 400}
 
 
@@ -99,4 +99,5 @@ def delete_label(label_id: int, request: Request, response: Response, db: Sessio
         raise HTTPException(detail='Label not found', status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         response.status_code = 400
+        logger.exception(e)
         return {'message': str(e), 'status': 400}
