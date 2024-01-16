@@ -1,3 +1,14 @@
+"""
+@Author: Divyansh Babu
+
+@Date: 2024-01-16 12:40
+
+@Last Modified by: Divyansh Babu
+
+@Last Modified time: 2024-01-16 11:04
+
+@Title : Fundoo Notes utils module.
+"""
 from datetime import datetime, timedelta
 import pytz
 from jose import jwt
@@ -6,16 +17,20 @@ import logging
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from core import settings
-from core.model import get_db, User
+from core.model import get_db, User, RequestLog
 import ssl
 from email.message import EmailMessage
 import smtplib
+import redis
+from core.settings import PORT, HOST
 
-logging.basicConfig(filename='../fundoo_notes.log', encoding='utf-8', level=logging.DEBUG,
+logging.basicConfig(filename='./fundoo_notes.log', encoding='utf-8', level=logging.DEBUG,
                     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+redis_obj = redis.Redis(host=HOST, port=PORT, decode_responses=True)
 
 
 class Hasher:
@@ -40,10 +55,15 @@ class JWT:
         try:
             return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         except jwt.JWTError as e:
-            raise e
+            logger.exception(e)
 
 
 def jwt_authorization(request: Request, db: Session = Depends(get_db)):
+    """
+    Description: This function decode jwt token.
+    Parameter: response as Response object, db as database session.
+    Return: None
+    """
     token = request.headers.get('authorization')
     decode_token = JWT.jwt_decode(token)
     user_id = decode_token.get('user_id')
@@ -54,6 +74,11 @@ def jwt_authorization(request: Request, db: Session = Depends(get_db)):
 
 
 def send_verification_email(verification_token: str, email):
+    """
+    Description: This function send mail to verify user.
+    Parameter: verification_token as string, email of user where send the mailto verify.
+    Return: None
+    """
     email_sender = settings.email_sender
     email_password = settings.email_password
 
@@ -73,3 +98,50 @@ def send_verification_email(verification_token: str, email):
         smtp.sendmail(email_sender, email, em.as_string())
         smtp.quit()
 
+
+class Redis:
+    @staticmethod
+    def add_redis(name, key, value):
+        """
+        Description: This function add and update data in redis memory.
+        Parameter: name, key, value as parameter.
+        Return: set the name, key, value to redis memory
+        """
+        return redis_obj.hset(name, key, value)
+
+    @staticmethod
+    def get_redis(name):
+        """
+        Description: This function get all data from redis memory.
+        Parameter: name as parameter.
+        Return: get all data from the redis memory using name.
+        """
+        return redis_obj.hgetall(name)
+
+    @staticmethod
+    def delete_redis(name, key):
+        """
+        Description: This function delete data from redis memory.
+        Parameter: name, key as parameter.
+        Return: delete data from redis using name and list of key.
+        """
+        return redis_obj.hdel(name, key)
+
+
+def request_loger(request):
+    """
+    Description: This function update the middleware table in database.
+    Parameter: response as parameter.
+    Return: None
+    """
+    session = get_db()
+    db = next(session)
+    log = db.query(RequestLog).filter_by(request_method=request.method,
+                                         request_path=request.url.path).one_or_none()
+    if not log:
+        log = RequestLog(request_method=request.method, request_path=request.url.path, count=1)
+        db.add(log)
+    else:
+        log.count += 1
+
+    db.commit()
