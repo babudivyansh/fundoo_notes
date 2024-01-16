@@ -1,11 +1,9 @@
 from logging.config import fileConfig
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
 from alembic import context
-
-from model import Base
+from core.model import Base
+from core.settings import DATABASE_PASSWORD, DATABASE_NAME
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -21,7 +19,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 config.set_section_option("alembic", "sqlalchemy.url",
-                          "postgresql+psycopg2://postgres:12345@localhost:5432/fundoo_notes")
+                          f"postgresql+psycopg2://postgres:{DATABASE_PASSWORD}@localhost:5432/{DATABASE_NAME}")
 
 target_metadata = Base.metadata
 
