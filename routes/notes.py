@@ -5,26 +5,19 @@
 
 @Last Modified by: Divyansh Babu
 
-@Last Modified time: 2024-01-04 12:40
+@Last Modified time: 2024-01-16 10:48
 
 @Title : Fundoo Notes crud APIs.
 """
-import redis
+import json
 from fastapi import APIRouter, status, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from core.model import get_db, Notes, User, collaborator
 from fastapi.responses import Response
 from core.schema import NotesSchema, CollaboratorSchema
-import logging
-from core.settings import PORT, HOST
-
-logging.basicConfig(filename='../fundoo_notes.log', encoding='utf-8', level=logging.DEBUG,
-                    format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-logger = logging.getLogger()
+from core.utils import logger, Redis
 
 router_notes = APIRouter()
-
-r = redis.Redis(host=HOST, port=PORT, decode_responses=True)
 
 
 @router_notes.post('/create', status_code=status.HTTP_201_CREATED, tags=["Notes"])
@@ -41,6 +34,7 @@ def create_note(payload: NotesSchema, request: Request, response: Response, db: 
         db.add(notes)
         db.commit()
         db.refresh(notes)
+        Redis.add_redis(f"user_{notes.user_id}", f"notes_{notes.id}", json.dumps(body))
         return {'message': 'Note Added', 'status': 201, 'data': body}
     except Exception as e:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -56,6 +50,12 @@ def getting_all_note(request: Request, response: Response, db: Session = Depends
     Return: Message of retrieved data with status code 200.
     """
     try:
+        redis_cons = Redis.get_redis(f"user_{request.state.user.id}")
+        if redis_cons:
+            # Convert the string representation to a dictionary
+            for key, value in redis_cons.items():
+                redis_cons[key] = json.loads(value)
+            return {'message': 'Data retrieved', 'status': 200, 'data': redis_cons}
         existing_note = db.query(Notes).filter_by(user_id=request.state.user.id).all()
         collab_notes = db.query(collaborator).filter_by(user_id=request.state.user.id).all()
         notes = db.query(Notes).filter(Notes.id.in_(list(map(lambda x: x.note_id, collab_notes)))).all()
@@ -85,6 +85,8 @@ def update_note(note_id: int, request: Request, payload: NotesSchema, response: 
         [setattr(note, key, value) for key, value in updated_data.items()]
         db.commit()
         db.refresh(note)
+        Redis.add_redis(f"user_{request.state.user.id}", f"notes_{note.id}", json.dumps(updated_data))
+
         return {'message': 'Note updated', 'status': 200, 'data': updated_data}
     except Exception as e:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -104,6 +106,7 @@ def delete_note(note_id: int, request: Request, response: Response, db: Session 
         if existing_note:
             db.delete(existing_note)
             db.commit()
+            Redis.delete_redis(f"user_{request.state.user.id}", *f"notes_{note_id}")
             return {'message': 'Note Deleted', 'status': 200}
         raise HTTPException(detail='Note not found', status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -112,7 +115,7 @@ def delete_note(note_id: int, request: Request, response: Response, db: Session 
         return {'message': str(e), 'status': 400}
 
 
-@router_notes.post('/add_collaborator', status_code=status.HTTP_200_OK, tags=["Notes"])
+@router_notes.post('/add_collaborator', status_code=status.HTTP_201_CREATED, tags=["Notes"])
 def add_collaborator(payload: CollaboratorSchema, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Description: Add a collaborator to a specific note.
@@ -137,7 +140,7 @@ def add_collaborator(payload: CollaboratorSchema, request: Request, response: Re
                                         status_code=status.HTTP_404_NOT_FOUND)
 
         db.commit()
-        return {'message': 'Collaborators added to the note', 'status': 200}
+        return {'message': 'Collaborators added to the note', 'status': 201}
     except Exception as e:
         response.status_code = status.HTTP_400_BAD_REQUEST
         logger.exception(e)
