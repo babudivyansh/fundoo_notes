@@ -131,7 +131,7 @@ class Redis:
 def request_loger(request):
     """
     Description: This function update the middleware table in database.
-    Parameter: response as parameter.
+    Parameter: request as parameter.
     Return: None
     """
     session = get_db()
