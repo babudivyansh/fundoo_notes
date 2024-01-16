@@ -1,43 +1,43 @@
+"""
+@Author: Divyansh Babu
+
+@Date: 2024-01-06 19:44
+
+@Last Modified by: Divyansh Babu
+
+@Last Modified time: 2024-01-16 10:52
+
+@Title : Fundoo Notes schema module.
+"""
 from pydantic import BaseModel, Field, EmailStr
+from typing import List
 
 
 class UserDetails(BaseModel):
-    user_name: str
-    password: str
-    email: EmailStr
-    first_name: str = Field(pattern=r"^[A-Z]{1}\D{3,}$")
-    last_name: str = Field(pattern=r"^[A-Z]{1}\D{3,}$")
-    location: str
-    phone: int
+    user_name: str = Field(default='Enter user name', title='Enter User name')
+    password: str = Field(default='Enter user password', title='Enter User password')
+    email: EmailStr = Field(default='Enter email id', title='Enter your email')
+    first_name: str = Field(default='Enter First Name', title='Enter First Name', pattern=r"^[A-Z]{1}\D{3,}$")
+    last_name: str = Field(default='Enter Last Name', title='Enter Last Name', pattern=r"^[A-Z]{1}\D{3,}$")
+    location: str = Field(default='Enter your location', title='Enter your location')
+    phone: int = Field(default='Enter phone number', title='Enter phone number')
 
 
 class Userlogin(BaseModel):
-    user_name: str
-    password: str
+    user_name: str = Field(default='Enter user name', title='Enter User name')
+    password: str = Field(default='Enter user password', title='Enter User password')
 
 
-class UpdateNote(BaseModel):
-    title: str
-    description: str
-    color: str
+class NotesSchema(BaseModel):
+    title: str = Field(default='Enter title', title='Enter title')
+    description: str = Field(default='Enter description', title='Enter description')
+    color: str = Field(default='Enter color', title='Enter color')
 
 
-class NotesSchema(UpdateNote):
-    user_id: int
+class LabelSchema(BaseModel):
+    label_name: str = Field(default='Enter label name', title='Enter label name')
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenResponse(BaseModel):
-    access_token: Token
-    refresh_token: Token
-
-
-class TokenData(BaseModel):
-    user_id: int | None = None
-
-    class Config:
-        arbitrary_types_allowed = True
+class CollaboratorSchema(BaseModel):
+    note_id: int = Field(title='Enter note id')
+    user_id: List[int]
