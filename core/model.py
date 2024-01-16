@@ -1,7 +1,19 @@
-from sqlalchemy.orm import declarative_base, Session, relationship
-from sqlalchemy import Column, String, BigInteger, create_engine, Boolean, DateTime, ForeignKey
+"""
+@Author: Divyansh Babu
 
-engine = create_engine("postgresql+psycopg2://postgres:12345@localhost:5432/fundoo_notes")
+@Date: 2024-01-04 12:40
+
+@Last Modified by: Divyansh Babu
+
+@Last Modified time: 2024-01-16 12:50
+
+@Title : Fundoo Notes model module.
+"""
+from sqlalchemy.orm import declarative_base, Session, relationship
+from sqlalchemy import Column, String, BigInteger, create_engine, Boolean, DateTime, ForeignKey, Table
+from core.settings import DATABASE_NAME, DATABASE_PASSWORD
+
+engine = create_engine(f"postgresql+psycopg2://postgres:{DATABASE_PASSWORD}@localhost:5432/{DATABASE_NAME}")
 session = Session(engine)
 Base = declarative_base()
 
@@ -12,6 +24,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+collaborator = Table('collaborator', Base.metadata,
+                     Column('user_id', BigInteger, ForeignKey('user.id')),
+                     Column('note_id', BigInteger, ForeignKey('notes.id')))
 
 
 class User(Base):
@@ -27,6 +44,8 @@ class User(Base):
     password = Column(String(100))
     is_verified = Column(Boolean, default=False)
     notes = relationship('Notes', back_populates='user')
+    label = relationship('Label', back_populates='user')
+    note_m2m = relationship('Notes', secondary=collaborator, overlaps='user')
 
     def __repr__(self):
         return self.user_name
@@ -42,6 +61,29 @@ class Notes(Base):
     reminder = Column(DateTime, default=None)
     user_id = Column(BigInteger, ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     user = relationship('User', back_populates='notes')
+    user_m2m = relationship('User', secondary=collaborator, overlaps='notes')
 
     def __repr__(self):
         return self.title
+
+
+class Label(Base):
+    __tablename__ = 'label'
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    label_name = Column(String(100))
+    user_id = Column(BigInteger, ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user = relationship('User', back_populates='label')
+
+    def __repr__(self):
+        return self.label_name
+
+
+class RequestLog(Base):
+    __tablename__ = "request_logs"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    request_method = Column(String)
+    request_path = Column(String)
+    count = Column(BigInteger, default=1)
+    # user = Column(String, nullable=True)  # which user
