@@ -5,10 +5,11 @@
 
 @Last Modified by: Divyansh Babu
 
-@Last Modified time: 2024-01-16 12:50
+@Last Modified time: 2024-01-23 19:23
 
 @Title : Fundoo Notes user module.
 """
+from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.orm import Session
 from core.model import User, get_db
@@ -57,6 +58,10 @@ def user_login(payload: Userlogin, response: Response, db: Session = Depends(get
         else:
             response.status_code = status.HTTP_401_UNAUTHORIZED
             return {"message": 'Invalid username, password, or user not verified', 'status': 401, 'data': {}}
+    except IntegrityError as e:
+        logger.exception(e)
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"message": "Username or Email is already exits", "status": 400}
     except Exception as e:
         response.status_code = 400
         logger.exception(e)

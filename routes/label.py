@@ -5,7 +5,7 @@
 
 @Last Modified by: Divyansh Babu
 
-@Last Modified time: 2024-01-16 10:45
+@Last Modified time: 2024-01-23 19:23
 
 @Title : Label crud APIs.
 """
@@ -83,7 +83,7 @@ def update_label(label_id: int, request: Request, payload: LabelSchema, response
         return {'message': str(e), 'status': 400}
 
 
-@router_label.delete("/delete/{id}", status_code=status.HTTP_200_OK, tags=["Label"])
+@router_label.delete("/delete/{label_id}", status_code=status.HTTP_200_OK, tags=["Label"])
 def delete_label(label_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Description: This function create fastapi for deleting the label into database.

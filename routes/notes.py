@@ -5,7 +5,7 @@
 
 @Last Modified by: Divyansh Babu
 
-@Last Modified time: 2024-01-16 10:48
+@Last Modified time: 2024-01-23 19:22
 
 @Title : Fundoo Notes crud APIs.
 """
@@ -43,7 +43,7 @@ def create_note(payload: NotesSchema, request: Request, response: Response, db: 
 
 
 @router_notes.get('/get', status_code=status.HTTP_200_OK, tags=["Notes"])
-def getting_all_note(request: Request, response: Response, db: Session = Depends(get_db)):
+def get_all_note(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Description: This function create api for getting data of all notes.
     Parameter: user as Userlogin object,response as Response object,db as database session.
@@ -78,9 +78,12 @@ def update_note(note_id: int, request: Request, payload: NotesSchema, response: 
     """
     try:
         note = db.query(Notes).filter_by(user_id=request.state.user.id, id=note_id).one_or_none()
-        if not note:
-            raise HTTPException(detail='Note not found', status_code=status.HTTP_404_NOT_FOUND)
-
+        if note is None:
+            collab = db.query(collaborator).filter_by(note_id=note_id, user_id=request.state.user.id).first()
+            if collab:
+                note = db.query(Notes).filter_by(id=note_id).first()
+            else:
+                raise HTTPException(detail='Note not found', status_code=status.HTTP_400_BAD_REQUEST)
         updated_data = payload.model_dump()
         [setattr(note, key, value) for key, value in updated_data.items()]
         db.commit()
@@ -94,7 +97,7 @@ def update_note(note_id: int, request: Request, payload: NotesSchema, response: 
         return {'message': str(e), 'status': 400}
 
 
-@router_notes.delete("/delete/{id}", status_code=status.HTTP_200_OK, tags=["Notes"])
+@router_notes.delete("/delete/{note_id}", status_code=status.HTTP_200_OK, tags=["Notes"])
 def delete_note(note_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Description: This function create fastapi for deleting the contact into database.
@@ -106,7 +109,7 @@ def delete_note(note_id: int, request: Request, response: Response, db: Session 
         if existing_note:
             db.delete(existing_note)
             db.commit()
-            Redis.delete_redis(f"user_{request.state.user.id}", *f"notes_{note_id}")
+            Redis.delete_redis(f"user_{request.state.user.id}", f"notes_{note_id}")
             return {'message': 'Note Deleted', 'status': 200}
         raise HTTPException(detail='Note not found', status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -121,7 +124,7 @@ def add_collaborator(payload: CollaboratorSchema, request: Request, response: Re
     Description: Add a collaborator to a specific note.
     Parameter: payload as CollaboratorSchema object containing note_id and user_id,
                request as Request object, response as Response object, db as database session.
-    Return: Message indicating the collaborator addition with status code 200.
+    Return: Message indicating the collaborator addition with status code 201.
     """
     try:
         note = db.query(Notes).filter_by(user_id=request.state.user.id, id=payload.note_id).first()
