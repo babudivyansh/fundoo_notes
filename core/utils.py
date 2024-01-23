@@ -5,7 +5,7 @@
 
 @Last Modified by: Divyansh Babu
 
-@Last Modified time: 2024-01-16 11:04
+@Last Modified time: 2024-01-23 19:24
 
 @Title : Fundoo Notes utils module.
 """
@@ -83,7 +83,7 @@ def send_verification_email(verification_token: str, email):
     email_password = settings.email_password
 
     subject = 'Email Verification'
-    body = f"Click the link to verify your email: http://127.0.0.1:8000/user/verify?token={verification_token}"
+    body = f"Click the link to verify your email: http://127.0.0.1:8080/user/verify?token={verification_token}"
 
     em = EmailMessage()
     em['From'] = email_sender

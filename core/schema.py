@@ -5,7 +5,7 @@
 
 @Last Modified by: Divyansh Babu
 
-@Last Modified time: 2024-01-16 10:52
+@Last Modified time: 2024-01-23 19:24
 
 @Title : Fundoo Notes schema module.
 """
@@ -15,11 +15,11 @@ from typing import List
 
 class UserDetails(BaseModel):
     user_name: str = Field(default='Enter user name', title='Enter User name')
-    password: str = Field(default='Enter user password', title='Enter User password')
+    password: str = Field(default='Enter user password', title='Enter User password', min_length=8)
     email: EmailStr = Field(default='Enter email id', title='Enter your email')
     first_name: str = Field(default='Enter First Name', title='Enter First Name', pattern=r"^[A-Z]{1}\D{3,}$")
     last_name: str = Field(default='Enter Last Name', title='Enter Last Name', pattern=r"^[A-Z]{1}\D{3,}$")
-    location: str = Field(default='Enter your location', title='Enter your location')
+    location: str = Field(default='Enter your City Name', title='Enter your City Name')
     phone: int = Field(default='Enter phone number', title='Enter phone number')
 
 
