@@ -14,7 +14,8 @@ from fastapi import APIRouter, Depends, status, Response, HTTPException
 from sqlalchemy.orm import Session
 from core.model import User, get_db
 from core.schema import UserDetails, Userlogin
-from core.utils import Hasher, JWT, send_verification_email, logger
+from core.utils import Hasher, JWT, logger
+from task import email_notification
 
 router_user = APIRouter()
 jwt_handler = JWT()
@@ -34,7 +35,8 @@ def user_registration(body: UserDetails, response: Response, db: Session = Depen
         db.add(new_user)
         db.commit()
         token = jwt_handler.jwt_encode({'user_id': new_user.id})
-        send_verification_email(token, new_user.email)
+        verification_link = f'http://127.0.0.1:8000/user/verify?token={token}'
+        email_notification.delay(new_user.user_name, verification_link, 'Email Verification')
         db.refresh(new_user)
         return {"status": 201, "message": "Registered successfully", 'data': {}}
     except Exception as e:

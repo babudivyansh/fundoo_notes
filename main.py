@@ -16,6 +16,8 @@ from routes.notes import router_notes
 from routes.label import router_label
 from core.utils import jwt_authorization, request_loger
 import warnings
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
 
@@ -23,10 +25,19 @@ warnings.filterwarnings("ignore")
 
 
 @app.middleware("http")
-def addmiddleware(request: Request, call_next):
-    response = call_next(request)
+async def addmiddleware(request: Request, call_next):
+    response = await call_next(request)
     request_loger(request)
     return response
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Add the origin of frontend application
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 app.include_router(router_user, prefix='/user')

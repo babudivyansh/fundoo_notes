@@ -15,3 +15,5 @@ DATABASE_NAME = getenv("DATABASE_NAME")
 
 PORT = getenv("PORT")
 HOST = getenv('localhost')
+
+redis_url = getenv("REDIS_URL")
